@@ -75,3 +75,56 @@ goog_y = (goog_div[goog_div.index.year == 2023].sum() / goog.iloc[-1]) * 100
 jpm_y = (jpm_div[jpm_div.index.year == 2023].sum() / jpm.iloc[-1]) * 100
 
 print(round(max([sar_y, brkb_y, aapl_y, msft_y, goog_y, jpm_y]), 1))
+
+# Question 6
+from datetime import date
+
+start_date = date(2010, 1, 1)
+end_date = date(2023, 12, 31)
+
+sp500 = yf.download("^GSPC", start=start_date, end=end_date)["Close"]
+
+# Calculate annual percentage change for S&P 500
+sp500_returns = (sp500.pct_change() * 100).dropna()
+
+# Get monthly CPI data
+monthly_cpi = []
+for year in range(start_date.year, end_date.year + 1):
+    for month in range(1, 13):
+        try:
+            cpi_date = date(year, month, 1)
+            cpi_value = cpi.get(cpi_date)
+            monthly_cpi.append([cpi_date, cpi_value])
+        except:
+            pass
+
+cpi_df = pd.DataFrame(monthly_cpi, columns=['DATE', 'CPI'])
+cpi_df.set_index('DATE', inplace=True)
+cpi_inflation = (cpi_df.pct_change() * 100).dropna()  # Calculate monthly percentage change, drop NA
+
+# Combine the two datasets
+data = pd.DataFrame({'S&P 500': sp500, 'CPI': cpi_df['CPI']}).dropna()
+# Calculate the monthly percentage change
+data = data.pct_change()
+# Calculate the 12-month rolling correlation
+rolling_corr = data['S&P 500'].rolling(12).corr(data['CPI'])
+
+# Plot the rolling correlation
+import matplotlib.pyplot as plt
+plt.figure(figsize=(12, 6))
+plt.plot(rolling_corr.index, rolling_corr)
+plt.title('12-Month Rolling Correlation between CPI and S&P 500')
+plt.xlabel('Date')
+plt.ylabel('Correlation')
+plt.show()
+
+# Analyze the relationship (plotting, correlation, etc.)
+plt.plot(sp500_returns.index, sp500_returns, label="S&P 500 Daily Returns")
+plt.plot(cpi_inflation.index, cpi_inflation, label="CPI Monthly Inflation")
+plt.legend()
+plt.title("S&P 500 Returns vs. CPI Inflation")
+plt.show()
+
+# Calculate correlation coefficient (optional)
+correlation = sp500_returns.rolling(12).corr(cpi_inflation)
+print("Correlation coefficient between S&P 500 returns and CPI inflation:", correlation)
